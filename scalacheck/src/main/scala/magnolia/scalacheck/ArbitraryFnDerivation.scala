@@ -54,3 +54,13 @@ object ArbitraryFnDerivation {
 
   implicit def gen[T]: Arbitrary[T => T] = macro Magnolia.gen[T]
 }
+
+object Test {
+  sealed trait TList
+  case object TNil extends TList
+  case class TNode(head: Int, tail: TList) extends TList
+
+  def main(args: Array[String]): Unit = {
+    ArbitraryFnDerivation.gen[TList].arbitrary.sample
+  }
+}
