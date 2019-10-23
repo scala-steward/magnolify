@@ -1,26 +1,53 @@
 package magnolia.bigquery.semiauto
 
+import com.google.api.services.bigquery.model.TableRow
 import magnolia._
+import magnolia.shims._
 
+import scala.collection.JavaConverters._
 import scala.language.experimental.macros
 
-//trait Mappable[M, V] {
-//  def empty: M
-//  def get(m: M, k: String): V
-//  def put(m: M, k: String, v: V): Unit
-//}
-//trait TableRowMappable[V] extends Mappable[java.util.Map[String, Any], V] {
 trait TableRowMappable[V] {
-  type M = java.util.Map[String, Any]
+  type M = TableRow
+  def empty: M = new TableRow
+
   def from(v: Any): V
   def to(v: V): Any
 
-  def empty: M = new java.util.LinkedHashMap[String, Any]
   def get(m: M, k: String): V = from(m.get(k))
   def put(m: M, k: String, v: V): Unit = m.put(k, to(v))
 }
 
 object TableRowMappable {
+  implicit def optionalTableRowM[V](implicit trm: TableRowMappable[V])
+  : TableRowMappable[Option[V]] =
+    new TableRowMappable[Option[V]] {
+      override def from(v: Any): Option[V] = ???
+      override def to(v: Option[V]): Any = ???
+
+      override def get(m: M, k: String): Option[V] =
+        Option(m.get(k)).map(trm.from)
+      override def put(m: M, k: String, v: Option[V]): Unit =
+        v.foreach(x => m.put(k, trm.to(x)))
+    }
+
+  implicit def seqTableRowM[V, S[V]](implicit trm: TableRowMappable[V],
+                                     toSeq: S[V] => Seq[V],
+                                     fc: FactoryCompat[V, S[V]]): TableRowMappable[S[V]] =
+    new TableRowMappable[S[V]] {
+      override def from(v: Any): S[V] = ???
+      override def to(v: S[V]): Any = ???
+
+      override def get(m: M, k: String): S[V] = m.get(k) match {
+        case null => fc.newBuilder.result()
+        case xs: java.util.List[Any] =>
+          fc.newBuilder.addAll(xs.asScala.iterator.map(trm.from)).result()
+
+      }
+      override def put(m: M, k: String, v: S[V]): Unit =
+        m.put(k, toSeq(v).iterator.map(trm.to).asJava)
+    }
+
   def at[V](fromFn: Any => V, toFn: V => Any): TableRowMappable[V] = new TableRowMappable[V] {
     override def from(v: Any): V = fromFn(v)
     override def to(v: V): Any = toFn(v)
@@ -47,25 +74,4 @@ object TableRowDerivation {
   def dispatch[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = ???
 
   implicit def apply[T]: Typeclass[T] = macro Magnolia.gen[T]
-}
-
-object Test {
-  case class A(i: Int, s: String)
-  case class B(i: Int, s: String, n: Option[Boolean], r: List[String])
-  def main(args: Array[String]): Unit = {
-    val m = TableRowDerivation[A]
-    val a = m.to(A(1, "123"))
-    println(a)
-    val b = m.from(a)
-    println(b)
-
-    val m1 = TableRowDerivation[B]
-    val a1 = m1.to(B(1, "123", Some(true), List("a", "b")))
-    println(a1)
-    val b1 = m1.from(a1)
-    println(b1)
-
-    val a1x = m1.to(B(1, "123", None, List("a", "b")))
-    println(a1x)
-  }
 }
