@@ -104,10 +104,14 @@ class ArbitraryDerivationTest extends FlatSpec with Matchers {
   ////////////////////////////////////////
 
   it should "work with Node" in {
+    import magnolia.scalacheck.semiauto.ArbitraryDerivation
+    implicit val fallback = ArbitraryDerivation.Recursive(Leaf(0))
     test(Node.gen)
   }
 
   it should "work with GNode" in {
+    import magnolia.scalacheck.semiauto.ArbitraryDerivation
+    implicit val fallback = ArbitraryDerivation.Recursive(GLeaf(0))
     test(GNode.gen[Int])
   }
 
