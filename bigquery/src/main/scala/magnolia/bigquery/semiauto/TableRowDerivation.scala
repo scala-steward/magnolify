@@ -64,5 +64,8 @@ object Test {
     println(a1)
     val b1 = m1.from(a1)
     println(b1)
+
+    val a1x = m1.to(B(1, "123", None, List("a", "b")))
+    println(a1x)
   }
 }
