@@ -148,8 +148,8 @@ lazy val bigquery: Project = project.in(file("bigquery")).settings(
   description := "Magnolia add-on for Google Cloud BigQuery",
   libraryDependencies ++= Seq(
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-    "com.google.apis" % "google-api-services-bigquery" % bigqueryVersion % Provided,
-    "joda-time" % "joda-time" % jodaTimeVersion % Provided,
+    "com.google.apis" % "google-api-services-bigquery" % bigqueryVersion,// % Provided,
+    "joda-time" % "joda-time" % jodaTimeVersion,// % Provided,
     "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion % Test
   )
 ).dependsOn(
