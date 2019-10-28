@@ -25,7 +25,7 @@ trait TableRowRecord[V] extends RecordType[V, TableRow, TableRow] {
   override def newBuilder: TableRow = new TableRow
 }
 
-object TableRowRecord {
+object TableRowRecord extends LowPriorityImplicits {
   type Typeclass[V] = TableRowRecord[V]
 
   def combine[V](caseClass: CaseClass[Typeclass, V]): Typeclass[V] = new Typeclass[V] {
@@ -42,7 +42,9 @@ object TableRowRecord {
   def dispatch[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = ???
 
   implicit def apply[T]: Typeclass[T] = macro Magnolia.gen[T]
+}
 
+trait LowPriorityImplicits {
   implicit def singletonTableRowRecord[V](implicit f: TableRowField[V]): TableRowRecord[V] =
     new TableRowRecord[V] {
       override def get(r: TableRow, k: String): V = f.read(r.get(k))
@@ -53,6 +55,12 @@ object TableRowRecord {
         w
       }
     }
+
+//  implicit def recordTableRowRecord[V](implicit f: TableRowRecord[V]): TableRowRecord[V] =
+//    new TableRowRecord[V] {
+//      override def get(r: TableRow, k: String): V = f.get(r, null)
+//      override def put(w: TableRow, k: String, v: V): TableRow = f.put(newBuilder, null, v)
+//    }
 }
 
 trait TableRowField[V] extends FieldType[V, Any, Any]
@@ -64,6 +72,12 @@ object TableRowField {
   }
   implicit val intTableRowField = at[Int](_.toString.toInt)(identity)
   implicit val stringTableRowField = at[String](_.toString)(identity)
+
+  implicit def recordTableRowField[V](implicit r: TableRowRecord[V]): TableRowField[V] =
+    new TableRowField[V] {
+      override def read(v: Any): V = r.get(v.asInstanceOf[TableRow], null)
+      override def write(v: V): Any = r.put(r.newBuilder, null, v)
+    }
 
   implicit def optionTableRowField[V](implicit f: TableRowField[V]): TableRowField[Option[V]] =
     new TableRowField[Option[V]] {
