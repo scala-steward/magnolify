@@ -78,6 +78,7 @@ lazy val root: Project = project.in(file(".")).settings(
   bigquery,
   datastore,
   tensorflow,
+  take2,
   test
 )
 
@@ -147,7 +148,6 @@ lazy val bigquery: Project = project.in(file("bigquery")).settings(
   moduleName := "magnolia-data-bigquery",
   description := "Magnolia add-on for Google Cloud BigQuery",
   libraryDependencies ++= Seq(
-    "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     "com.google.apis" % "google-api-services-bigquery" % bigqueryVersion % Provided,
     "joda-time" % "joda-time" % jodaTimeVersion % Provided,
     "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion % Test
@@ -179,6 +179,23 @@ lazy val tensorflow: Project = project.in(file("tensorflow")).settings(
   description := "Magnolia add-on for TensorFlow",
   libraryDependencies ++= Seq(
     "org.tensorflow" % "proto" % tensorflowVersion % Provided
+  )
+).dependsOn(
+  core,
+  cats % Test,
+  scalacheck % Test,
+  test % "test->test"
+)
+
+lazy val take2: Project = project.in(file("take2")).settings(
+  commonSettings,
+  moduleName := "magnolia-data-take2",
+  description := "Magnolia converters, take 2",
+  libraryDependencies ++= Seq(
+    "com.google.cloud.datastore" % "datastore-v1-proto-client" % datastoreVersion % Provided,
+    "org.tensorflow" % "proto" % tensorflowVersion % Provided,
+    "com.google.apis" % "google-api-services-bigquery" % bigqueryVersion % Provided,
+    "joda-time" % "joda-time" % jodaTimeVersion % Provided
   )
 ).dependsOn(
   core,
