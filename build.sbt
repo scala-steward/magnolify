@@ -192,10 +192,10 @@ lazy val take2: Project = project.in(file("take2")).settings(
   moduleName := "magnolia-data-take2",
   description := "Magnolia converters, take 2",
   libraryDependencies ++= Seq(
-    "com.google.cloud.datastore" % "datastore-v1-proto-client" % datastoreVersion % Provided,
-    "org.tensorflow" % "proto" % tensorflowVersion % Provided,
-    "com.google.apis" % "google-api-services-bigquery" % bigqueryVersion % Provided,
-    "joda-time" % "joda-time" % jodaTimeVersion % Provided
+    "com.google.cloud.datastore" % "datastore-v1-proto-client" % datastoreVersion,
+    "org.tensorflow" % "proto" % tensorflowVersion,
+    "com.google.apis" % "google-api-services-bigquery" % bigqueryVersion,
+    "joda-time" % "joda-time" % jodaTimeVersion
   )
 ).dependsOn(
   core,
