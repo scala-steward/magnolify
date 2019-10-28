@@ -7,12 +7,6 @@ import magnolia.shims.FactoryCompat
 import scala.collection.JavaConverters._
 import scala.language.experimental.macros
 
-object Impl
-
-////////////////////////////////////////
-// BigQuery
-////////////////////////////////////////
-
 trait TableRowType[T] extends ConverterType[T, TableRow, TableRow]
 
 object TableRowType {
@@ -29,13 +23,24 @@ object TableRowRecord extends LowPriorityImplicits {
   type Typeclass[V] = TableRowRecord[V]
 
   def combine[V](caseClass: CaseClass[Typeclass, V]): Typeclass[V] = new Typeclass[V] {
-    override def get(r: TableRow, k: String): V =
-      caseClass.construct { p => p.typeclass.get(r, p.label) }
+    override val nested: Boolean = true
+
+    override def get(r: TableRow, k: String): V = caseClass.construct { p =>
+      if (p.typeclass.nested) {
+        p.typeclass.get(r.get(p.label).asInstanceOf[TableRow], null)
+      } else {
+        p.typeclass.get(r, p.label)
+      }
+    }
 
     override def put(w: TableRow, k: String, v: V): TableRow =
       caseClass.parameters.foldLeft(w) { (w, p) =>
-        println("PUT", w, p.label, p.dereference(v))
-        p.typeclass.put(w, p.label, p.dereference(v))
+        if (p.typeclass.nested) {
+          w.put(p.label, p.typeclass.put(p.typeclass.newBuilder, null, p.dereference(v)))
+          w
+        } else {
+          p.typeclass.put(w, p.label, p.dereference(v))
+        }
       }
   }
 
@@ -55,12 +60,6 @@ trait LowPriorityImplicits {
         w
       }
     }
-
-//  implicit def recordTableRowRecord[V](implicit f: TableRowRecord[V]): TableRowRecord[V] =
-//    new TableRowRecord[V] {
-//      override def get(r: TableRow, k: String): V = f.get(r, null)
-//      override def put(w: TableRow, k: String, v: V): TableRow = f.put(newBuilder, null, v)
-//    }
 }
 
 trait TableRowField[V] extends FieldType[V, Any, Any]
@@ -70,6 +69,7 @@ object TableRowField {
     override def read(v: Any): V = f(v)
     override def write(v: V): Any = g(v)
   }
+
   implicit val intTableRowField = at[Int](_.toString.toInt)(identity)
   implicit val stringTableRowField = at[String](_.toString)(identity)
 
@@ -96,7 +96,7 @@ object TableRowField {
         case null => fc.newBuilder.result()
         case xs => fc.build(xs.asScala.iterator.map(f.read))
       }
-      override def write(v: S[V]): Any = ts(v).asJava
+      override def write(v: S[V]): Any = ts(v).map(f.write).asJava
     }
 }
 

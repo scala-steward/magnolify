@@ -10,6 +10,7 @@ trait ConverterType[T, RecordReader, RecordWriter] {
 
 trait RecordType[V, RecordReader, RecordWriter] {
   def newBuilder: RecordWriter
+  val nested: Boolean = false
   def get(r: RecordReader, k: String): V
   def put(w: RecordWriter, k: String, v: V): RecordWriter
 }
@@ -19,15 +20,15 @@ trait FieldType[V, FieldReader, FieldWriter] {
   def write(v: V): FieldWriter
 }
 
-//trait RecordTypeCompanion[V] {
-//  type Typeclass[V] <:
-//}
-
 object Test {
   case class A1(i: Int, s: String)
   case class A2(io: Option[Int], so: Option[String])
   case class A3(is: List[Int], ss: List[String])
   case class B(a1: A1, a2: A2, a3: A3)
+
+  case class C(ao: Option[A1], as: List[A1])
+
+  case class CX(ao: Option[A1])
 
   def main(args: Array[String]): Unit = {
     implicitly[TableRowField[Int]]
@@ -50,5 +51,9 @@ object Test {
     val b = TableRowType[B]
     println(b.to(B(A1(1, "a"), A2(Some(2), Some("b")), A3(List(3), List("c")))))
 //    println(b.from(b.to(B(A1(1, "a"), A2(Some(2), Some("b")), A3(List(3), List("c"))))))
+//
+    val c = TableRowType[C]
+    println(c.to(C(Some(A1(1, "a")), List(A1(2, "b")))))
+    println(c.from(c.to(C(Some(A1(1, "a")), List(A1(2, "b"))))))
   }
 }
