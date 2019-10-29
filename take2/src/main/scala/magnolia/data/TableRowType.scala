@@ -16,10 +16,10 @@ object TableRowType {
 }
 
 trait TableRowRecord[V] extends RecordType[V, TableRow, TableRow] {
-  override def newBuilder: TableRow = new TableRow
+  override def newWriter: TableRow = new TableRow
 }
 
-object TableRowRecord extends LowPriorityImplicits {
+object TableRowRecord extends LowPriorityTableRowImplicits {
   type Typeclass[V] = TableRowRecord[V]
 
   def combine[V](caseClass: CaseClass[Typeclass, V]): Typeclass[V] = new Typeclass[V] {
@@ -36,7 +36,7 @@ object TableRowRecord extends LowPriorityImplicits {
     override def put(w: TableRow, k: String, v: V): TableRow =
       caseClass.parameters.foldLeft(w) { (w, p) =>
         if (p.typeclass.nested) {
-          w.put(p.label, p.typeclass.put(p.typeclass.newBuilder, null, p.dereference(v)))
+          w.put(p.label, p.typeclass.put(newWriter, null, p.dereference(v)))
           w
         } else {
           p.typeclass.put(w, p.label, p.dereference(v))
@@ -49,7 +49,7 @@ object TableRowRecord extends LowPriorityImplicits {
   implicit def apply[T]: Typeclass[T] = macro Magnolia.gen[T]
 }
 
-trait LowPriorityImplicits {
+trait LowPriorityTableRowImplicits {
   implicit def singletonTableRowRecord[V](implicit f: TableRowField[V]): TableRowRecord[V] =
     new TableRowRecord[V] {
       override def get(r: TableRow, k: String): V = f.read(r.get(k))
@@ -70,13 +70,13 @@ object TableRowField {
     override def write(v: V): Any = g(v)
   }
 
-  implicit val intTableRowField = at[Int](_.toString.toInt)(identity)
+  implicit val longTableRowField = at[Long](_.toString.toLong)(identity)
   implicit val stringTableRowField = at[String](_.toString)(identity)
 
   implicit def recordTableRowField[V](implicit r: TableRowRecord[V]): TableRowField[V] =
     new TableRowField[V] {
       override def read(v: Any): V = r.get(v.asInstanceOf[TableRow], null)
-      override def write(v: V): Any = r.put(r.newBuilder, null, v)
+      override def write(v: V): Any = r.put(r.newWriter, null, v)
     }
 
   implicit def optionTableRowField[V](implicit f: TableRowField[V]): TableRowField[Option[V]] =
@@ -99,7 +99,3 @@ object TableRowField {
       override def write(v: S[V]): Any = ts(v).map(f.write).asJava
     }
 }
-
-////////////////////////////////////////
-// TensorFlow
-////////////////////////////////////////
