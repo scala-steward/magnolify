@@ -25,18 +25,43 @@ object ExampleType {
 
   def combine[T](caseClass: CaseClass[Typeclass, T]): Typeclass[T] = new Typeclass[T] {
     override val kind: ExampleField.Kind = null
+    override val nested: Boolean = true
 
     override def from(r: Features): T =
-      caseClass.construct(p => p.typeclass.get(r, p.label))
+      caseClass.construct { p =>
+        if (p.typeclass.nested) {
+          val inner = empty
+          r.getFeatureMap.asScala.foreach { case (k, v) =>
+            if (k.startsWith(s"${p.label}.")) {
+              inner.putFeature(k.substring(p.label.length + 1), v)
+            }
+          }
+          p.typeclass.fromField(inner.build())
+        } else {
+          p.typeclass.get(r, p.label)
+        }
+      }
 
     override def to(t: T): Features.Builder =
       caseClass.parameters.foldLeft(empty) { (r, p) =>
-        p.typeclass.put(r, p.label, p.dereference(t))
+        if (p.typeclass.nested) {
+          val inner = p.typeclass.toField(p.dereference(t)).asInstanceOf[Features.Builder]
+          inner.getFeatureMap.asScala.foreach { case (k, v) =>
+            r.putFeature(s"${p.label}.$k", v)
+          }
+          r
+        } else {
+          p.typeclass.put(r, p.label, p.dereference(t))
+        }
       }
 
     // FIXME: flatten nested fields
-    override def fromField(v: Any): T = ???
-    override def toField(v: T): Any = ???
+    override def fromField(v: Any): T =
+      caseClass.construct(p => p.typeclass.get(v.asInstanceOf[Features], p.label))
+    override def toField(v: T): Any =
+      caseClass.parameters.foldLeft(empty) { (r, p) =>
+        p.typeclass.put(r, p.label, p.dereference(v))
+      }
   }
 
   def dispatch[T](sealedTrait: SealedTrait[Typeclass, T]): Typeclass[T] = ???
@@ -48,6 +73,7 @@ sealed trait ExampleField[V]
   extends ExampleType[V]
   with Converter.Field[V, Features, Features.Builder] { self =>
   val kind: ExampleField.Kind
+  val nested: Boolean = false
 
   override def get(r: Features, k: String): V = {
     val xs = kind.getList(r.getFeatureMap.get(k))

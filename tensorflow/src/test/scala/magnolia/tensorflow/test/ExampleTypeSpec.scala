@@ -25,35 +25,50 @@ object ExampleTypeSpec extends MagnoliaSpec("ExampleType") {
     }
   }
 
-  implicit val efInt: ExampleField[Int] = ExampleField.atLong(_.toInt)(_.toLong)
+  test[B]
 
-  {
-    implicit val efBoolean: ExampleField[Boolean] =
-      ExampleField.atLong(_ == 1)(x => if (x) 1 else 0)
-    implicit val efString: ExampleField[String] =
-      ExampleField.atBytes(_.toStringUtf8)(ByteString.copyFromUtf8)
-    test[Integers]
-    test[Required]
-    test[Nullable]
-    test[Repeated]
-    // FIXME: flatten nested types
-    // test[Nested]
-  }
+//  implicit val efInt: ExampleField[Int] = ExampleField.atLong(_.toInt)(_.toLong)
+//
+//  {
+//    implicit val efBoolean: ExampleField[Boolean] =
+//      ExampleField.atLong(_ == 1)(x => if (x) 1 else 0)
+//    implicit val efString: ExampleField[String] =
+//      ExampleField.atBytes(_.toStringUtf8)(ByteString.copyFromUtf8)
+//    test[Integers]
+//    test[Required]
+//    test[Nullable]
+//    test[Repeated]
+//    // FIXME: flatten nested types
+//    // test[Nested]
+//  }
+//
+//  {
+//    implicit val eqArray: Eq[Array[Int]] = Eq.by(_.toList)
+//    test[Collections]
+//  }
+//
+//  {
+//    import Custom._
+//    implicit val eqUri: Eq[URI] = Eq.by(_.toString)
+//    implicit val eqDuration: Eq[Duration] = Eq.by(_.toMillis)
+//    implicit val efUri: ExampleField[URI] = ExampleField.atBytes(
+//      x => URI.create(x.toStringUtf8))(x => ByteString.copyFromUtf8(x.toString))
+//    implicit val efDuration: ExampleField[Duration] =
+//      ExampleField.atLong(Duration.ofMillis)(_.toMillis)
+//
+//    test[Custom]
+//  }
+}
 
-  {
-    implicit val eqArray: Eq[Array[Int]] = Eq.by(_.toList)
-    test[Collections]
-  }
-
-  {
-    import Custom._
-    implicit val eqUri: Eq[URI] = Eq.by(_.toString)
-    implicit val eqDuration: Eq[Duration] = Eq.by(_.toMillis)
-    implicit val efUri: ExampleField[URI] = ExampleField.atBytes(
-      x => URI.create(x.toStringUtf8))(x => ByteString.copyFromUtf8(x.toString))
-    implicit val efDuration: ExampleField[Duration] =
-      ExampleField.atLong(Duration.ofMillis)(_.toMillis)
-
-    test[Custom]
+object Test {
+  def main(args: Array[String]): Unit = {
+    val b = ExampleType[B]
+    println(b.to(B(1, A(2, 3))))
+    println(b.from(b.to(B(1, A(2, 3))).build()))
+//    println(ExampleType[B1].to(B1(1, Some(A(2, 3)))))
   }
 }
+
+case class A(a: Long, b: Long)
+case class B(x: Long, aa: A)
+case class B1(x: Long, aa: Option[A])
